@@ -3,6 +3,12 @@
 .claude
 .codex
 
+# Sonar scanner working directory
+.scannerwork/
+
+# Runtime uploads (user-submitted background images)
+uploads/
+
 # Logs
 logs
 *.log

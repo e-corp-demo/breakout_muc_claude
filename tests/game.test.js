@@ -695,8 +695,10 @@ describe('createBreakoutGame', () => {
       globalThis.fetch = jest.fn().mockRejectedValue(new Error('err'));
       const s = document.getElementById('upload-status');
       s.remove();
-      game.handleFileUpload({ target:{ files:[new File(['x'],'t.jpg')] } });
-      await flushPromises();
+      await expect(async () => {
+        game.handleFileUpload({ target:{ files:[new File(['x'],'t.jpg')] } });
+        await flushPromises();
+      }).not.toThrow();
       const d = document.createElement('div'); d.id='upload-status';
       document.body.appendChild(d);
     });
