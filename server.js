@@ -49,13 +49,20 @@ app.post('/api/upload-bg', upload.single('background'), (req, res) => {
 });
 
 // eslint-disable-next-line no-unused-vars
-app.use((err, _req, res, _next) => {
+function errorHandler(err, _req, res, _next) {
   if (err && (err.code === 'LIMIT_FILE_SIZE' || err.code === 'INVALID_MIME' || err instanceof multer.MulterError)) {
     return res.status(400).json({ error: err.message });
   }
   res.status(500).json({ error: 'Internal server error' });
-});
+}
+app.use(errorHandler);
 
-app.listen(PORT, () => {
-  process.stdout.write(`Breakout game running at http://localhost:${PORT}\n`);
-});
+/* istanbul ignore next */
+if (require.main === module) {
+  app.listen(PORT, () => {
+    process.stdout.write(`Breakout game running at http://localhost:${PORT}\n`);
+  });
+}
+
+module.exports = app;
+module.exports.errorHandler = errorHandler;

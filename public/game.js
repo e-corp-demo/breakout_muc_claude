@@ -1,12 +1,21 @@
 'use strict';
 
-(function () {
+function showScreen(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  const el = document.getElementById(id);
+  if (el) el.classList.add('active');
+}
+
+function hideScreens() {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+}
+
+function createBreakoutGame(canvas) {
   // ── Canvas & layout ──────────────────────────────────────────────────────
   const GAME_W   = 700;
   const GAME_H   = 600;
   const PANEL_W  = 200;
 
-  const canvas = document.getElementById('game-canvas');
   canvas.width  = GAME_W + PANEL_W;
   canvas.height = GAME_H;
   const ctx = canvas.getContext('2d');
@@ -42,7 +51,7 @@
   ];
 
   // ── Mutable state ────────────────────────────────────────────────────────
-  let gameState  = 'start';   // 'start' | 'playing' | 'paused' | 'gameover'
+  let gameState  = 'start';
   let score      = 0;
   let lives      = MAX_LIVES;
   let level      = 1;
@@ -76,7 +85,7 @@
 
   function launchBall() {
     const spd   = ballSpeed();
-    const angle = (rnd() * 0.5 - 0.25) * Math.PI; // NOSONAR — game randomness, not security-sensitive
+    const angle = (rnd() * 0.5 - 0.25) * Math.PI;
     ball.vx       = Math.sin(angle) * spd;
     ball.vy       = -Math.cos(angle) * spd;
     ball.attached = false;
@@ -213,7 +222,6 @@
         ctx.fill();
       });
 
-      // Specular highlight strip
       ctx.save();
       ctx.globalAlpha   = 0.35;
       ctx.strokeStyle   = '#ffffff';
@@ -249,16 +257,16 @@
     ctx.fillStyle = '#00f7ff';
     ctx.fillText(`SCORE: ${score}`, 10, 22);
 
-    ctx.textAlign = 'center';
-    ctx.fillStyle = '#bf00ff';
+    ctx.textAlign   = 'center';
+    ctx.fillStyle   = '#bf00ff';
     ctx.shadowColor = '#bf00ff';
     ctx.shadowBlur  = 6;
     ctx.fillText(`LEVEL ${level}`, GAME_W / 2, 22);
-    ctx.shadowBlur = 0;
+    ctx.shadowBlur  = 0;
 
     ctx.textAlign = 'right';
     ctx.fillStyle = '#ff2d78';
-    const hearts = '♥'.repeat(lives) + '♡'.repeat(MAX_LIVES - lives);
+    const hearts  = '♥'.repeat(lives) + '♡'.repeat(MAX_LIVES - lives);
     ctx.fillText(hearts, GAME_W - 10, 22);
     ctx.restore();
   }
@@ -373,7 +381,6 @@
     if (ball.x + BALL_R > GAME_W)  { ball.x = GAME_W - BALL_R; ball.vx = -Math.abs(ball.vx); }
     if (ball.y - BALL_R < 0)       { ball.y = BALL_R;           ball.vy =  Math.abs(ball.vy); }
 
-    // Paddle bounce
     if (
       ball.vy > 0 &&
       ball.y + BALL_R >= PADDLE_Y &&
@@ -381,15 +388,14 @@
       ball.x >= paddle.x - BALL_R &&
       ball.x <= paddle.x + paddle.w + BALL_R
     ) {
-      const hit   = (ball.x - paddle.x) / paddle.w;       // 0 … 1
-      const angle = (hit - 0.5) * (Math.PI * 0.65);       // ±~60°
+      const hit   = (ball.x - paddle.x) / paddle.w;
+      const angle = (hit - 0.5) * (Math.PI * 0.65);
       const spd   = ballSpeed();
       ball.vx = Math.sin(angle) * spd;
       ball.vy = -Math.cos(angle) * spd;
       ball.y  = PADDLE_Y - BALL_R - 1;
     }
 
-    // Ball lost
     if (ball.y - BALL_R > GAME_H) {
       lives--;
       if (lives <= 0) {
@@ -521,19 +527,8 @@
     }
   }
 
-  // ── DOM helpers ───────────────────────────────────────────────────────────
-  function showScreen(id) {
-    document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
-    const el = document.getElementById(id);
-    if (el) el.classList.add('active');
-  }
-
-  function hideScreens() {
-    document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
-  }
-
-  // ── Keyboard input ────────────────────────────────────────────────────────
-  document.addEventListener('keydown', e => {
+  // ── Input handlers ────────────────────────────────────────────────────────
+  function handleKeyDown(e) {
     if (e.code === 'ArrowLeft')  { keyLeft  = true; e.preventDefault(); return; }
     if (e.code === 'ArrowRight') { keyRight = true; e.preventDefault(); return; }
 
@@ -556,29 +551,21 @@
     if (e.code === 'Escape' && (gameState === 'playing' || gameState === 'paused')) {
       abortToStart();
     }
-  });
+  }
 
-  document.addEventListener('keyup', e => {
+  function handleKeyUp(e) {
     if (e.code === 'ArrowLeft')  keyLeft  = false;
     if (e.code === 'ArrowRight') keyRight = false;
-  });
+  }
 
-  // ── Mouse input ───────────────────────────────────────────────────────────
-  canvas.addEventListener('click', () => {
-    if (gameState === 'playing' && ball.attached) launchBall();
-  });
-
-  canvas.addEventListener('mousemove', e => {
+  function handleMouseMove(e) {
     const rect = canvas.getBoundingClientRect();
     const mx   = (e.clientX - rect.left) * (canvas.width / rect.width);
     paddle.x   = mx - paddle.w / 2;
     paddle.x   = Math.max(0, Math.min(GAME_W - paddle.w, paddle.x));
-  });
+  }
 
-  // ── Buttons ───────────────────────────────────────────────────────────────
-  document.getElementById('btn-start').addEventListener('click', () => startGame());
-
-  document.getElementById('btn-save').addEventListener('click', () => {
+  function handleSave() {
     const input = document.getElementById('name-input');
     const name  = input ? input.value : '';
     saveHighScore(name, score, level);
@@ -587,14 +574,13 @@
     gameState = 'start';
     drawBackground();
     drawPanel();
-  });
+  }
 
-  document.getElementById('name-input').addEventListener('keydown', e => {
-    if (e.code === 'Enter') document.getElementById('btn-save').click();
-  });
+  function handleNameInputKey(e) {
+    if (e.code === 'Enter') handleSave();
+  }
 
-  // ── Background image upload ───────────────────────────────────────────────
-  document.getElementById('upload-file').addEventListener('change', e => {
+  function handleFileUpload(e) {
     const file   = e.target.files?.[0];
     const status = document.getElementById('upload-status');
     if (!file) return;
@@ -608,7 +594,6 @@
         return r.json();
       })
       .then(data => {
-        // Validate URL to prevent open-redirect or path traversal
         if (typeof data.url !== 'string' || !ALLOWED_URL_RE.test(data.url)) {
           throw new Error('Invalid image URL returned from server');
         }
@@ -620,8 +605,84 @@
       .catch(err => {
         if (status) status.textContent = err.message ? err.message.slice(0, 20) : 'ERR';
       });
-  });
+  }
 
-  // ── Boot ──────────────────────────────────────────────────────────────────
+  // ── Event listener wiring ─────────────────────────────────────────────────
+  function setupEventListeners() {
+    document.addEventListener('keydown', handleKeyDown);
+    document.addEventListener('keyup', handleKeyUp);
+    canvas.addEventListener('click', () => {
+      if (gameState === 'playing' && ball.attached) launchBall();
+    });
+    canvas.addEventListener('mousemove', handleMouseMove);
+
+    const btnStart  = document.getElementById('btn-start');
+    if (btnStart)  btnStart.addEventListener('click', startGame);
+
+    const btnSave   = document.getElementById('btn-save');
+    if (btnSave)   btnSave.addEventListener('click', handleSave);
+
+    const nameInput = document.getElementById('name-input');
+    if (nameInput) nameInput.addEventListener('keydown', handleNameInputKey);
+
+    const uploadFile = document.getElementById('upload-file');
+    if (uploadFile) uploadFile.addEventListener('change', handleFileUpload);
+  }
+
+  setupEventListeners();
   abortToStart();
-})();
+
+  function destroy() {
+    document.removeEventListener('keydown', handleKeyDown);
+    document.removeEventListener('keyup', handleKeyUp);
+    if (animId !== null) { cancelAnimationFrame(animId); animId = null; }
+  }
+
+  // ── Public API (also used by tests) ──────────────────────────────────────
+  return {
+    startGame, pauseGame, abortToStart, launchBall, destroy,
+    buildBricks, resetBall, resetPaddle, ballSpeed, rnd,
+    spawnParticles, updateParticles,
+    circleHitsRect, resolveBrickSide, checkBrickCollisions,
+    updatePhysics, updatePaddle, nextLevel, endGame,
+    loadHighScores, saveHighScore,
+    drawBackground, drawPaddle, drawBall, drawBricks,
+    drawParticles, drawHUD, drawPanel, withGlow, loop,
+    handleKeyDown, handleKeyUp, handleMouseMove,
+    handleSave, handleNameInputKey, handleFileUpload,
+    showScreen, hideScreens,
+    // State accessors
+    getGameState:  () => gameState,
+    getBall:       () => ball,
+    getPaddle:     () => paddle,
+    getBricks:     () => bricks,
+    getParticles:  () => particles,
+    getLives:      () => lives,
+    getScore:      () => score,
+    getLevel:      () => level,
+    getAnimId:     () => animId,
+    // State mutators for test setup
+    setGameState:    s   => { gameState  = s;   },
+    setLives:        v   => { lives      = v;   },
+    setScore:        v   => { score      = v;   },
+    setLevel:        v   => { level      = v;   },
+    setBgImage:      img => { bgImageObj = img; },
+    setBallAttached: v   => { ball.attached = v; },
+    setAnimId:       v   => { animId     = v;   },
+    setKeyLeft:      v   => { keyLeft    = v;   },
+    setKeyRight:     v   => { keyRight   = v;   },
+    setLastTime:     v   => { lastTime   = v;   },
+  };
+}
+
+// ── CommonJS export ───────────────────────────────────────────────────────────
+if (typeof module !== 'undefined' && module.exports) {
+  module.exports = { createBreakoutGame, showScreen, hideScreens };
+}
+
+// ── Browser auto-init ─────────────────────────────────────────────────────────
+/* istanbul ignore next */
+if (typeof module === 'undefined' && typeof document !== 'undefined') {
+  const _canvas = document.getElementById('game-canvas');
+  if (_canvas) createBreakoutGame(_canvas);
+}
